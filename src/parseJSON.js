@@ -23,12 +23,18 @@ var parseJSON = function(json) {
   // result is obj being built
   var result;
 
+  var eatWhite = function() {
+    while ( chr.match(/\s/) ) {
+      next();
+    }
+  };
+
   var error = function(e) {
     throw new SyntaxError(e+' at '+at+' in '+json, 'parseJSON');
   };
 
   var string = function() {
-    var str;
+    var str = '';
     if (chr==='"') {
       while( next() ) {
         if (chr==='"') {
@@ -51,22 +57,82 @@ var parseJSON = function(json) {
     error('Bad string');
   };
 
-  var array = function() {
-    
-  };
-
   var number = function() {
     var result = chr;
     next();
-    while (chr.match(/\d/)) {
-      result = result + chr;
-      next();
+    var digitSet = function() {
+      while (chr.match(/\d/)) {
+        result = result + chr;
+        next();
+      }
     }
+    var decOrExp = function(punc) {
+      if (chr.toUpperCase() === punc) {
+        result = result + chr;
+        next();
+        if (chr.match(/\d/)) {
+          digitSet();
+        } else {
+          error('Unexpected end of input')
+        }
+      }
+    }
+    digitSet();
+    decOrExp('.');
+    decOrExp('E');
     return +result;
   };
 
   var object = function() {
+    var result = {};
+    var key;
+    if (chr === '{') {
+      next();
+      eatWhite();  
+      if (chr === '}') {
+        next();
+        return result;
+      }
+      while (chr) {
+        key = string();
+        eatWhite();
+        next(':');
+        result[key] = value();
+        eatWhite();
+        if (chr === '}') {
+          next();
+          return result;
+        }
+        next(',');
+        eatWhite();
+      }
+      error('missing "}"');
+    }
+  };
 
+  var array = function() {
+    var arr = [];
+
+    if ( chr==='[' ) {
+      next();
+      eatWhite();
+      if ( chr === ']' ) {
+        next();
+        return arr;
+      }
+      while (chr) {
+        eatWhite();
+        arr.push(value());
+        eatWhite();
+        if ( chr === ']' ) {
+          next();
+          return arr;
+        }
+        next(',');
+        eatWhite();
+      }
+      error('missing "]"');
+    }
   };
 
   var word = function() {
@@ -106,9 +172,7 @@ var parseJSON = function(json) {
 
   // this is what loops
   var value = function() {
-    while ( chr.match(/\s/) ) {
-      next();
-    }
+    eatWhite();
     if (chr==='{') {
       return object();
     }

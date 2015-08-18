@@ -5,7 +5,17 @@ var parseJSON = function(json) {
   // The hard way:
 
   // escape char obj
-  var esc = {};
+  var esc = {
+              '"':'"',
+              '\\':'\\',
+              '/':'/',
+              'n':'\n',
+              'r':'\r',
+              't':'\t',
+              "'":"'",
+              'f':'\f',
+              'b':'\b'
+  };
   // at is current position #
   var at;
   // chr is current character
@@ -14,11 +24,31 @@ var parseJSON = function(json) {
   var result;
 
   var error = function(e) {
-    throw new SyntaxError(e+' at '+at+' in '+json), 'parseJSON');
+    throw new SyntaxError(e+' at '+at+' in '+json, 'parseJSON');
   };
 
   var string = function() {
-
+    var str;
+    if (chr==='"') {
+      while( next() ) {
+        if (chr==='"') {
+          next();
+          return str;
+        } else if (chr==='\\') {
+          next();
+          //if u unicode
+          //i think hex too
+          if ( esc.hasOwnProperty(chr) ) {
+            str+=esc[chr];
+          } else {
+            error('Unexpected token');
+          }
+        } else {
+          str+=chr;
+        }
+      }
+    }
+    error('Bad string');
   };
 
   var array = function() {
